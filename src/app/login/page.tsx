@@ -9,16 +9,20 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter, // ИЗМЕНЕНИЕ: Добавлен CardFooter для переключателя
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// ИЗМЕНЕНИЕ: Импортируем функцию для создания пользователя
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from '@/context/AuthContext';
+
+// ИЗМЕНЕНИЕ: Определяем тип для ошибки Firebase для безопасности
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -26,28 +30,24 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  // ИЗМЕНЕНИЕ: Состояние для переключения между входом и регистрацией
   const [isLoginMode, setIsLoginMode] = useState(true);
-  // ИЗМЕНЕНИЕ: Состояние для отображения ошибок на форме
   const [error, setError] = useState('');
 
-  // Этот хук, как и раньше, перенаправляет залогиненного пользователя
   useEffect(() => {
     if (!loading && user) {
       router.push('/dashboard');
     }
   }, [user, loading, router]);
 
-  // ИЗМЕНЕНИЕ: Универсальная функция для входа и регистрации
   const handleAuthAction = async () => {
-    setError(''); // Сбрасываем ошибку перед новой попыткой
+    setError(''); 
     
     if (isLoginMode) {
       // --- Логика входа ---
       try {
         await signInWithEmailAndPassword(auth, email, password);
         router.push('/dashboard');
-      } catch (err) {
+      } catch (err: unknown) { // Явно указываем тип unknown
         console.error("Ошибка при входе:", err);
         setError('Неверный email или пароль. Пожалуйста, попробуйте снова.');
       }
@@ -59,12 +59,13 @@ export default function LoginPage() {
       }
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        // После успешной регистрации Firebase автоматически логинит пользователя,
-        // поэтому сработает useEffect и перенаправит на /dashboard
         router.push('/dashboard');
-      } catch (err) {
+      } catch (err: unknown) { // Явно указываем тип unknown
         console.error("Ошибка при регистрации:", err);
-        if (err.code === 'auth/email-already-in-use') {
+        
+        // ИЗМЕНЕНИЕ: Добавляем безопасную проверку типа ошибки
+        const firebaseError = err as FirebaseError;
+        if (firebaseError.code === 'auth/email-already-in-use') {
           setError('Этот email уже зарегистрирован.');
         } else {
           setError('Произошла ошибка при регистрации.');
@@ -73,13 +74,11 @@ export default function LoginPage() {
     }
   };
   
-  // Переключатель режима
   const toggleMode = () => {
     setIsLoginMode(!isLoginMode);
-    setError(''); // Сбрасываем ошибку при переключении
+    setError('');
   };
 
-  // Пока идет проверка, показываем загрузчик
   if (loading || (!loading && user)) {
     return <p className="flex items-center justify-center min-h-screen">Загрузка...</p>;
   }
@@ -88,7 +87,6 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          {/* ИЗМЕНЕНИЕ: Заголовок меняется в зависимости от режима */}
           <CardTitle className="text-2xl">{isLoginMode ? 'Вход' : 'Регистрация'}</CardTitle>
           <CardDescription>
             {isLoginMode
@@ -118,15 +116,12 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          {/* ИЗМЕНЕНИЕ: Отображение текста ошибки */}
           {error && <p className="text-sm font-medium text-destructive">{error}</p>}
           
-          {/* ИЗМЕНЕНИЕ: Кнопка теперь универсальная */}
           <Button onClick={handleAuthAction} className="w-full">
             {isLoginMode ? 'Войти' : 'Зарегистрироваться'}
           </Button>
         </CardContent>
-        {/* ИЗМЕНЕНИЕ: Ссылка для переключения режима */}
         <CardFooter className="text-sm justify-center">
           <button onClick={toggleMode} className="text-blue-600 hover:underline">
             {isLoginMode
