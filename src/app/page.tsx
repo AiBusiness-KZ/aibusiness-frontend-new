@@ -1,30 +1,30 @@
-// src/app/page.tsx - ТЕСТОВЫЙ КОД
+// src/app/page.tsx
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function HomePage() {
-  const [count, setCount] = useState(0);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    // Этот лог мы обязаны увидеть, если JS работает
-    console.log('--- ТЕСТ: Компонент HomePage успешно смонтирован ---');
-  }, []);
+    // Пока идет проверка статуса пользователя, ничего не делаем
+    if (loading) {
+      return;
+    }
 
-  return (
-    <div style={{ fontFamily: 'sans-serif', padding: '50px', textAlign: 'center', fontSize: '1.2rem' }}>
-      <h1>Тестовая страница</h1>
-      <p>Если вы видите это, значит, React работает.</p>
-      
-      <button 
-        style={{ padding: '10px 20px', fontSize: '1rem', margin: '20px' }}
-        onClick={() => setCount(c => c + 1)}
-      >
-        Нажми на меня
-      </button>
+    // Если пользователь есть, перенаправляем на дашборд
+    if (user) {
+      router.push('/dashboard');
+    } else {
+      // Если пользователя нет, перенаправляем на страницу входа
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
-      <p>Счетчик: {count}</p>
-    </div>
-  );
+  // Показываем индикатор загрузки, пока идет проверка
+  return <p>Загрузка...</p>;
 }
