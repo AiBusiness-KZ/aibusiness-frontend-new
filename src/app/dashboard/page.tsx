@@ -183,7 +183,7 @@ export default function DashboardPage() {
             </div>
             <Button 
               onClick={handleParse} 
-              disabled={isParsing || !selectedFile || (profile?.plan === 'free' && profile?.usage_count >= 3)}
+              disabled={isParsing || !selectedFile || (profile?.plan === 'free' && profile?.usage_count >= 10)}
             >
               {isParsing ? 'Обработка...' : 'Начать обработку'}
             </Button>
