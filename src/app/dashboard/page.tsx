@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadFile, getMe, createCheckoutSession, getTaskResult } from '@/lib/api';
-// ИЗМЕНЕНИЕ: Импортируем нашу новую кнопку
 import { DownloadButton } from '@/components/DownloadButton';
+// ИЗМЕНЕНИЕ: Импортируем иконку для спиннера загрузки
+import { Loader2 } from 'lucide-react';
 
 interface UserProfile {
   email: string;
@@ -25,13 +26,13 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [jsonResult, setJsonResult] = useState(''); // Для отображения в Textarea
+  const [jsonResult, setJsonResult] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  // ИЗМЕНЕНИЕ: Новое состояние для хранения финального JSON как ОБЪЕКТА
-  // Это нужно для передачи в кнопку скачивания
   const [finalJsonObject, setFinalJsonObject] = useState<object | null>(null);
+  
+  // ИЗМЕНЕНИЕ: Новое состояние для хранения текстового статуса загрузки
+  const [statusMessage, setStatusMessage] = useState('Ожидание результата...');
 
   // Эффект для защиты роута и первоначальной загрузки профиля
   useEffect(() => {
@@ -51,24 +52,25 @@ export default function DashboardPage() {
     try {
       resultObj = JSON.parse(jsonResult);
     } catch (e) {
-      return; // Выходим, если jsonResult - это не валидный JSON
+      return; 
     }
 
     if (resultObj && resultObj.status === 'processing' && resultObj.task_id) {
+      // ИЗМЕНЕНИЕ: Обновляем сообщение для пользователя
+      setStatusMessage('Файл обрабатывается на сервере...');
       const intervalId = setInterval(async () => {
         try {
           const taskResult = await getTaskResult(resultObj.task_id);
           
           if (taskResult.status === 'done') {
             clearInterval(intervalId);
-            // ИЗМЕНЕНИЕ: Обновляем оба состояния - и строку для textarea, и объект для кнопки
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setFinalJsonObject(taskResult.result); // Сохраняем как объект
+            setFinalJsonObject(taskResult.result);
             setIsParsing(false);
           } else if (taskResult.status === 'error') {
             clearInterval(intervalId);
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setFinalJsonObject(null); // Сбрасываем объект в случае ошибки
+            setFinalJsonObject(null);
             setIsParsing(false);
           }
         } catch (error) {
@@ -76,6 +78,7 @@ export default function DashboardPage() {
           clearInterval(intervalId);
           setIsParsing(false);
           setFinalJsonObject(null);
+          setStatusMessage('Произошла ошибка при получении результата.');
         }
       }, 3000);
 
@@ -93,9 +96,10 @@ export default function DashboardPage() {
     if (!selectedFile) return alert('Пожалуйста, выберите файл!');
     
     setIsParsing(true);
-    // ИЗМЕНЕНИЕ: Сбрасываем предыдущие результаты перед новым парсингом
-    setJsonResult('{"status": "starting", "message": "Отправка файла..."}');
+    setJsonResult(''); // Очищаем поле результата
     setFinalJsonObject(null); 
+    // ИЗМЕНЕНИЕ: Устанавливаем начальное сообщение
+    setStatusMessage('Отправка файла на сервер...');
 
     try {
       const result = await uploadFile(selectedFile);
@@ -109,6 +113,7 @@ export default function DashboardPage() {
       if (error instanceof Error) errorMessage = error.message;
       alert(`Ошибка: ${errorMessage}`);
       setJsonResult(`Ошибка: ${errorMessage}`);
+      setStatusMessage(`Ошибка: ${errorMessage}`);
       setIsParsing(false);
     }
   };
@@ -131,7 +136,12 @@ export default function DashboardPage() {
   };
   
   if (loading || !profile) {
-    return <p>Загрузка...</p>;
+    // ИЗМЕНЕНИЕ: Улучшенный глобальный экран загрузки
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (
@@ -169,7 +179,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="pdf-file">PDF-файл</Label>
-              <Input id="pdf-file" type="file" accept=".pdf" onChange={handleFileChange} />
+              <Input id="pdf-file" type="file" accept=".pdf" onChange={handleFileChange} disabled={isParsing} />
             </div>
             <Button 
               onClick={handleParse} 
@@ -186,22 +196,37 @@ export default function DashboardPage() {
             <CardDescription>Здесь появится результат обработки в формате JSON.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* ИЗМЕНЕНИЕ: Блок с кнопкой скачивания */}
-            {/* Он появится только тогда, когда finalJsonObject будет содержать данные */}
-            {finalJsonObject && (
-              <div className="mb-4">
-                <DownloadButton 
-                  jsonData={finalJsonObject} 
-                  userEmail={profile.email} 
-                />
+            {/* --- ИЗМЕНЕНИЕ: ЛОГИКА ОТОБРАЖЕНИЯ РЕЗУЛЬТАТА --- */}
+            {isParsing ? (
+              // Если идет парсинг, показываем спиннер и статус
+              <div className="flex flex-col items-center justify-center h-96">
+                <Loader2 className="h-16 w-16 animate-spin text-blue-600 mb-4" />
+                <p className="text-gray-500">{statusMessage}</p>
               </div>
+            ) : finalJsonObject ? (
+              // Если парсинг завершен и есть результат, показываем кнопку и данные
+              <>
+                <div className="mb-4">
+                  <DownloadButton 
+                    jsonData={finalJsonObject} 
+                    userEmail={profile.email} 
+                  />
+                </div>
+                <Textarea
+                  readOnly
+                  value={jsonResult}
+                  className="h-96 font-mono"
+                />
+              </>
+            ) : (
+              // В остальных случаях (ошибка или начальное состояние) показываем Textarea
+              <Textarea
+                readOnly
+                value={jsonResult}
+                placeholder={statusMessage}
+                className="h-96 font-mono"
+              />
             )}
-            <Textarea
-              readOnly
-              value={jsonResult}
-              placeholder="Ожидание результата..."
-              className="h-96 font-mono"
-            />
           </CardContent>
         </Card>
       </main>
