@@ -1,6 +1,5 @@
-cat <<EOF > src/app/globals.css
 /* Стандартные директивы Tailwind CSS.
-  Они должны быть в самом верху.
+  Они должны быть в самом верху и только они.
 */
 @tailwind base;
 @tailwind components;
@@ -12,47 +11,47 @@ cat <<EOF > src/app/globals.css
 @layer base {
   /* Переменные для светлой темы */
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --radius: 0.625rem;
+    --background: 255 255 255;
+    --foreground: 0 0 0;
+    --card: 255 255 255;
+    --card-foreground: 0 0 0;
+    --popover: 255 255 255;
+    --popover-foreground: 0 0 0;
+    --primary: 0 0 0;
+    --primary-foreground: 255 255 255;
+    --secondary: 242 242 242;
+    --secondary-foreground: 0 0 0;
+    --muted: 242 242 242;
+    --muted-foreground: 128 128 128;
+    --accent: 242 242 242;
+    --accent-foreground: 0 0 0;
+    --destructive: 255 0 0;
+    --border: 229 229 229;
+    --input: 229 229 229;
+    --ring: 0 0 0;
+    --radius: 0.5rem;
   }
 
   /* Переменные для темной темы */
   .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: 0 0 0;
+    --foreground: 255 255 255;
+    --card: 0 0 0;
+    --card-foreground: 255 255 255;
+    --popover: 0 0 0;
+    --popover-foreground: 255 255 255;
+    --primary: 255 255 255;
+    --primary-foreground: 0 0 0;
+    --secondary: 25 25 25;
+    --secondary-foreground: 255 255 255;
+    --muted: 25 25 25;
+    --muted-foreground: 128 128 128;
+    --accent: 25 25 25;
+    --accent-foreground: 255 255 255;
+    --destructive: 255 0 0;
+    --border: 25 25 25;
+    --input: 25 25 25;
+    --ring: 255 255 255;
   }
 }
 
@@ -65,4 +64,3 @@ cat <<EOF > src/app/globals.css
     @apply bg-background text-foreground;
   }
 }
-EOF
