@@ -1,3 +1,5 @@
+// src/app/dashboard/page.tsx
+
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -10,9 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { loadStripe } from '@stripe/stripe-js';
 import { uploadFile, getMe, createCheckoutSession, getTaskResult } from '@/lib/api';
-// ИЗМЕНЕНИЕ: Импортируем нашу новую кнопку
-import { DownloadButton } from '@/components/DownloadButton';
 
 interface UserProfile {
   email: string;
@@ -25,13 +26,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [jsonResult, setJsonResult] = useState(''); // Для отображения в Textarea
+  const [jsonResult, setJsonResult] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  // ИЗМЕНЕНИЕ: Новое состояние для хранения финального JSON как ОБЪЕКТА
-  // Это нужно для передачи в кнопку скачивания
-  const [finalJsonObject, setFinalJsonObject] = useState<object | null>(null);
 
   // Эффект для защиты роута и первоначальной загрузки профиля
   useEffect(() => {
@@ -54,6 +51,7 @@ export default function DashboardPage() {
       return; // Выходим, если jsonResult - это не валидный JSON
     }
 
+    // Запускаем опрос только если статус "processing"
     if (resultObj && resultObj.status === 'processing' && resultObj.task_id) {
       const intervalId = setInterval(async () => {
         try {
@@ -61,27 +59,25 @@ export default function DashboardPage() {
           
           if (taskResult.status === 'done') {
             clearInterval(intervalId);
-            // ИЗМЕНЕНИЕ: Обновляем оба состояния - и строку для textarea, и объект для кнопки
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setFinalJsonObject(taskResult.result); // Сохраняем как объект
-            setIsParsing(false);
+            setIsParsing(false); // Завершаем парсинг
           } else if (taskResult.status === 'error') {
             clearInterval(intervalId);
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setFinalJsonObject(null); // Сбрасываем объект в случае ошибки
-            setIsParsing(false);
+            setIsParsing(false); // Завершаем парсинг с ошибкой
           }
+          // Если статус все еще "processing", молча ждем следующей итерации
         } catch (error) {
           console.error(error);
           clearInterval(intervalId);
           setIsParsing(false);
-          setFinalJsonObject(null);
         }
-      }, 3000);
+      }, 3000); // Опрашиваем каждые 3 секунды
 
+      // Очищаем интервал при размонтировании компонента
       return () => clearInterval(intervalId);
     }
-  }, [jsonResult]);
+  }, [jsonResult]); // Этот эффект зависит от jsonResult
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -93,14 +89,13 @@ export default function DashboardPage() {
     if (!selectedFile) return alert('Пожалуйста, выберите файл!');
     
     setIsParsing(true);
-    // ИЗМЕНЕНИЕ: Сбрасываем предыдущие результаты перед новым парсингом
     setJsonResult('{"status": "starting", "message": "Отправка файла..."}');
-    setFinalJsonObject(null); 
 
     try {
       const result = await uploadFile(selectedFile);
-      setJsonResult(JSON.stringify(result, null, 2));
+      setJsonResult(JSON.stringify(result, null, 2)); // Устанавливаем статус "processing"
       
+      // Обновляем счетчик после успешной отправки
       const updatedProfile = await getMe();
       setProfile(updatedProfile);
     } catch (error) {
@@ -172,9 +167,9 @@ export default function DashboardPage() {
               <Input id="pdf-file" type="file" accept=".pdf" onChange={handleFileChange} />
             </div>
             <Button 
-              onClick={handleParse} 
-              disabled={isParsing || !selectedFile || (profile?.plan === 'free' && profile?.usage_count >= 3)}
-            >
+             onClick={handleParse} 
+             disabled={isParsing || !selectedFile || (profile?.plan === 'free' && profile?.usage_count >= 3)}
+             >
               {isParsing ? 'Обработка...' : 'Начать обработку'}
             </Button>
           </CardContent>
@@ -186,16 +181,6 @@ export default function DashboardPage() {
             <CardDescription>Здесь появится результат обработки в формате JSON.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* ИЗМЕНЕНИЕ: Блок с кнопкой скачивания */}
-            {/* Он появится только тогда, когда finalJsonObject будет содержать данные */}
-            {finalJsonObject && (
-              <div className="mb-4">
-                <DownloadButton 
-                  jsonData={finalJsonObject} 
-                  userEmail={profile.email} 
-                />
-              </div>
-            )}
             <Textarea
               readOnly
               value={jsonResult}
