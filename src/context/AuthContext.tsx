@@ -21,17 +21,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged - это слушатель из Firebase.
-    // Он должен быть внутри одного, верхнеуровневого useEffect.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth State Changed:", user ? user.email : 'No user');
       setUser(user);
       setLoading(false);
     });
 
-    // Отписываемся от слушателя при размонтировании компонента
     return () => unsubscribe();
-  }, []); // Пустой массив зависимостей гарантирует, что эффект запустится один раз
+  }, []);
 
   const value = { user, loading };
 
