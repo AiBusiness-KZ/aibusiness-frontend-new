@@ -63,7 +63,7 @@ export async function createCheckoutSession() {
   return response.json();
 }
 
-// Функция для получения результата задачи
+// Новая функция для получения результата задачи
 export async function getTaskResult(taskId: string) {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("Пользователь не авторизован");

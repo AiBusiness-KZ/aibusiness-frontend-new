@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const [isParsing, setIsParsing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Эффект для защиты роута и загрузки профиля
+  // Эффект для защиты роута и первоначальной загрузки профиля
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -48,32 +48,36 @@ export default function DashboardPage() {
     try {
       resultObj = JSON.parse(jsonResult);
     } catch (e) {
-      return;
+      return; // Выходим, если jsonResult - это не валидный JSON
     }
 
+    // Запускаем опрос только если статус "processing"
     if (resultObj && resultObj.status === 'processing' && resultObj.task_id) {
       const intervalId = setInterval(async () => {
         try {
           const taskResult = await getTaskResult(resultObj.task_id);
+          
           if (taskResult.status === 'done') {
             clearInterval(intervalId);
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setIsParsing(false);
+            setIsParsing(false); // Завершаем парсинг
           } else if (taskResult.status === 'error') {
             clearInterval(intervalId);
             setJsonResult(JSON.stringify(taskResult.result, null, 2));
-            setIsParsing(false);
+            setIsParsing(false); // Завершаем парсинг с ошибкой
           }
+          // Если статус все еще "processing", молча ждем следующей итерации
         } catch (error) {
           console.error(error);
           clearInterval(intervalId);
           setIsParsing(false);
         }
-      }, 3000);
+      }, 3000); // Опрашиваем каждые 3 секунды
 
+      // Очищаем интервал при размонтировании компонента
       return () => clearInterval(intervalId);
     }
-  }, [jsonResult]);
+  }, [jsonResult]); // Этот эффект зависит от jsonResult
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -85,12 +89,13 @@ export default function DashboardPage() {
     if (!selectedFile) return alert('Пожалуйста, выберите файл!');
     
     setIsParsing(true);
-    setJsonResult('');
+    setJsonResult('{"status": "starting", "message": "Отправка файла..."}');
 
     try {
       const result = await uploadFile(selectedFile);
-      setJsonResult(JSON.stringify(result, null, 2));
+      setJsonResult(JSON.stringify(result, null, 2)); // Устанавливаем статус "processing"
       
+      // Обновляем счетчик после успешной отправки
       const updatedProfile = await getMe();
       setProfile(updatedProfile);
     } catch (error) {
@@ -140,7 +145,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Перейдите на PRO</CardTitle>
             <CardDescription>
-              Вы использовали {profile.usage_count} из {3} бесплатных попыток. 
+              Вы использовали {profile.usage_count} из 3 бесплатных попыток. 
               Перейдите на PRO-тариф для неограниченной обработки файлов.
             </CardDescription>
           </CardHeader>
